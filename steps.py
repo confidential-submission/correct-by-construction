@@ -25,7 +25,7 @@ def predict_binary_classification_step(net, batch, batch_idx, **kw):
 def response_step(net, batch, batch_idx, **kw):
 
 	inputs, labels  = batch
-	inputs = attributeResponse(inputs, index=8, categories = [-1, 1.])
+	inputs = attributeResponse(inputs, index=kw['sensitive_index'], categories = [-1, 1.])
 	labels = labels.repeat(2, 1)
 	inputs, labels = inputs.to(kw['device']), labels.to(kw['device'])
 
@@ -45,7 +45,7 @@ def response_step(net, batch, batch_idx, **kw):
 def stochastic_step(net, batch, batch_idx, **kw):
 
 	inputs, labels  = batch
-	inputs = attributeRR(inputs, index=8, epsilon=0., categories=[-1, 1.])
+	inputs = attributeRR(inputs, index=kw['sensitive_index'], epsilon=0., categories=[-1, 1.])
 	inputs, labels = inputs.to(kw['device']), labels.to(kw['device'])
 
 	scores = net(inputs)
@@ -85,7 +85,7 @@ def binary_fair_classification_step(net, batch, batch_idx, **kw):
 	original_predictions = scores > 0
 
 	flipped_inputs = inputs.clone()
-	flipped_inputs[:, 8] = - flipped_inputs[:, 8]
+	flipped_inputs[:, kw['sensitive_index']] = - flipped_inputs[:, kw['sensitive_index']]
 
 	flipped_scores = net(flipped_inputs)
 	flipped_predictions = flipped_scores > 0

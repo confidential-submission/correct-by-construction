@@ -10,7 +10,7 @@ from steps import erm_step, response_step, stochastic_step, binary_classificatio
 config = {
 	'dataset':'census',
 	'training_step':'response_step',
-	'batch_size':32,
+	'batch_size':16,
 	'optimizer':'SGD',
 	'optimizer_config':{
 	},
@@ -24,7 +24,7 @@ config = {
 	'sensitive_index':6,
 }
 
-model = torch.hub.load('cat-claws/nn', 'simplecnn', convs = [], linears = [13, 64, 32, 16, 8, 4], num_classes = 1).to(config['device'])
+model = torch.hub.load('cat-claws/nn', 'simplecnn', convs = [], linears = [7, 64, 32, 16, 8, 4], num_classes = 1).to(config['device'])
 
 with torch.no_grad():
     model.layers[1].weight.zero_()
@@ -41,13 +41,19 @@ for k, v in config.items():
 
 import pandas as pd
 import numpy as np
-splits = {'train': 'data/train-00000-of-00001.parquet', 'test': 'data/test-00000-of-00001.parquet'}
-data = pd.read_parquet("hf://datasets/cestwc/census-income/" + splits["train"])
+df = pd.read_parquet("hf://datasets/cestwc/law-school-admissions/data/train-00000-of-00001.parquet")
+df_ = df.drop(['enroll', 'asian', 'black', 'hispanic', 'white', 'missingrace', 'urm'], axis=1)
+df_.replace(to_replace=-1, value=np.nan, inplace=True)
+data = df_.dropna(axis=0)
 
-X = data.drop(data.columns[[2, -1]], axis=1).values  # Features
+X = data.drop(data.columns[[-1]], axis=1).values  # Features
 y = data.iloc[:, -1].values   # Labels (target)
-X[:, 8] = np.where(X[:, 8] == 0, -1, X[:, 8])
-X[:, 9] = X[:, 9]/1000
+
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X[:, 0:6] = scaler.fit_transform(X[:, 0:6])
+X[:, 6] = np.where(X[:, 6] == 0, -1, X[:, 6])
+
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1))
 train_set, val_set = torch.utils.data.random_split(dataset, [int(len(X)*0.7), len(X)-int(len(X)*0.7)])
@@ -56,7 +62,7 @@ train_loader = torch.utils.data.DataLoader(train_set, num_workers = 4, batch_siz
 val_loader = torch.utils.data.DataLoader(val_set, num_workers = 4, batch_size = config['batch_size'])
 
 
-for epoch in range(100):
+for epoch in range(200):
 	if epoch > 0:
 		train(model, train_loader = train_loader, epoch = epoch, writer = writer, **config)
 
