@@ -28,7 +28,7 @@ model = torch.hub.load('cat-claws/nn', 'simplecnn', convs = [], linears = [7, 64
 
 with torch.no_grad():
     model.layers[1].weight.zero_()
-    model.layers[1].weight += 1e-10
+    model.layers[1].weight += 1e-10 * np.sign(np.random.randn())
 
 writer = SummaryWriter(comment = f"_{config['dataset']}_{model._get_name()}_{config['training_step']}", flush_secs=10)
 
